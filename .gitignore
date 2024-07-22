@@ -1,0 +1,6 @@
+# User files
+.vs/
+*.csproj.user
+
+# Build folder
+_build_/

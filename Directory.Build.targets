@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+
+  <PropertyGroup>
+    <CleanDependsOn>$(CleanDependsOn);Restore;</CleanDependsOn>
+  </PropertyGroup>
+
+  <Target Name="GenerateVersionInfo" BeforeTargets="GetAssemblyVersion;InitializeSourceControlInformation">
+    <!--
+      The 'revision' number is computed starting from the 'git rev-list' command output. On the release
+      commit, $(VersionPrefix) is set, but $(VersionSuffix) and $(BaseCommitForCount) are empty, so
+      'revision' is equal to $(ReleaseBase), i.e. 20000. On the rel-branch that starts from release
+      commit, $(VersionSuffix) is emprty and $(BaseCommitForCount) is the release commit, so 'revision'
+      is greater than $(ReleaseBase). On master, after the release commit, $(VersionPrefix) and
+      $(VersionSuffix) are set to new semantic version values and $(BaseCommitForCount) is set to the
+      previous release commit, so 'revision' number is greater than 0, but less than $(ReleaseBase).
+      An '*' is added in front of the HEAD commit hash if the worktree is dirty.
+    -->
+
+    <PropertyGroup>
+      <GitCMD>C:\Programs\PortableGit\cmd\git.exe</GitCMD>
+      <ReleaseBase>20000</ReleaseBase>
+      <CommitCount>0</CommitCount>
+    </PropertyGroup>
+
+    <Exec Condition="'$(BaseCommitForCount)' != ''"
+          Command="$(GitCMD) rev-list --count $(BaseCommitForCount)..HEAD"
+          ConsoleToMSBuild="true"
+          StandardOutputImportance="normal"
+    >
+      <Output TaskParameter="ConsoleOutput" PropertyName="CommitCount" />
+    </Exec>
+
+    <Exec Command="$(GitCMD) rev-parse HEAD"
+          ConsoleToMSBuild="true"
+          StandardOutputImportance="normal"
+    >
+      <Output TaskParameter="ConsoleOutput" PropertyName="SourceRevisionId" />
+    </Exec>
+
+    <Exec Command="$(GitCMD) diff --quiet &amp;&amp; echo clean"
+          ConsoleToMSBuild="true"
+          IgnoreExitCode="true"
+          StandardOutputImportance="normal"
+    >
+      <Output TaskParameter="ConsoleOutput" PropertyName="DirtyFlag" />
+    </Exec>
+
+    <PropertyGroup>
+      <CommitCount Condition="'$(VersionSuffix)' == ''">$([MSBuild]::Add($(ReleaseBase), $(CommitCount)))</CommitCount>
+      <FileVersion>$(VersionPrefix).$(CommitCount)</FileVersion>
+      <SourceRevisionId Condition="'$(DirtyFlag)' == ''">*$(SourceRevisionId)</SourceRevisionId>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <AssemblyMetadata Include="SourceRevisionId" Value="$(SourceRevisionId)" />
+    </ItemGroup>
+
+  </Target>
+
+</Project>
