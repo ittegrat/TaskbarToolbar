@@ -5,21 +5,44 @@
     <CleanDependsOn>$(CleanDependsOn);Restore;</CleanDependsOn>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <GitCMD Condition="'$(GitCMD)' == ''" >C:\Programs\PortableGit\cmd\git.exe</GitCMD>
+    <ReleaseBase Condition="'$(ReleaseBase)' == ''" >20000</ReleaseBase>
+  </PropertyGroup>
+
   <Target Name="GenerateVersionInfo" BeforeTargets="GetAssemblyVersion;InitializeSourceControlInformation">
+
+    <PropertyGroup>
+      <IsInsideWorkTree>false</IsInsideWorkTree>
+    </PropertyGroup>
+
+    <Exec Command="$(GitCMD) rev-parse -q --is-inside-work-tree"
+          IgnoreExitCode="true"
+          ConsoleToMSBuild="true"
+          StandardOutputImportance="normal"
+          StandardErrorImportance="low"
+    >
+      <Output TaskParameter="ConsoleOutput" PropertyName="IsInsideWorkTree" />
+    </Exec>
+
+    <CallTarget Condition="'$(IsInsideWorkTree)' == 'true'" Targets="DoGenerateVersionInfo" />
+
+  </Target>
+
+  <Target Name="DoGenerateVersionInfo">
     <!--
       The 'revision' number is computed starting from the 'git rev-list' command output. On the release
-      commit, $(VersionPrefix) is set, but $(VersionSuffix) and $(BaseCommitForCount) are empty, so
-      'revision' is equal to $(ReleaseBase), i.e. 20000. On the rel-branch that starts from release
-      commit, $(VersionSuffix) is emprty and $(BaseCommitForCount) is the release commit, so 'revision'
-      is greater than $(ReleaseBase). On master, after the release commit, $(VersionPrefix) and
-      $(VersionSuffix) are set to new semantic version values and $(BaseCommitForCount) is set to the
-      previous release commit, so 'revision' number is greater than 0, but less than $(ReleaseBase).
-      An '*' is added in front of the HEAD commit hash if the worktree is dirty.
+      commit, $(VersionPrefix) (i.e. major.minor.build) is set, but $(VersionSuffix) (i.e. dev, rc, etc.)
+      and $(BaseCommitForCount) are empty, so 'revision' is equal to $(ReleaseBase), i.e. 20000. On the
+      rel-branch that starts from release commit, $(VersionSuffix) is emprty and $(BaseCommitForCount)
+      is the release commit, so 'revision' is greater than $(ReleaseBase). On master, after the release
+      commit, $(VersionPrefix) and $(VersionSuffix) are set to new semantic version values and
+      $(BaseCommitForCount) is set to the previous release commit, so the 'revision' number is greater
+      than 0, but less than $(ReleaseBase). An '*' is added in front of the HEAD commit hash if the
+      worktree is dirty.
     -->
 
     <PropertyGroup>
-      <GitCMD>C:\Programs\PortableGit\cmd\git.exe</GitCMD>
-      <ReleaseBase>20000</ReleaseBase>
       <CommitCount>0</CommitCount>
     </PropertyGroup>
 
@@ -39,8 +62,8 @@
     </Exec>
 
     <Exec Command="$(GitCMD) diff --quiet &amp;&amp; echo clean"
-          ConsoleToMSBuild="true"
           IgnoreExitCode="true"
+          ConsoleToMSBuild="true"
           StandardOutputImportance="normal"
     >
       <Output TaskParameter="ConsoleOutput" PropertyName="DirtyFlag" />

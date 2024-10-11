@@ -47,7 +47,7 @@ namespace TaskbarToolbar
 
       // Only a single instace is allowed to run
       Mutex singleInstance;
-      if (Configuration.GetValue("singleInstance", true)) {
+      if (Configuration.GetValue("single.instance", true)) {
         singleInstance = new Mutex(true, "TbTbSingleInstance", out bool granted);
         if (!granted) {
           Debug.WriteLine("Taskbar Toolbar is already running. Exiting.");
@@ -68,6 +68,7 @@ namespace TaskbarToolbar
 
       // NotifyIcon ContextMenu
       ni.ContextMenu = new ContextMenu();
+      ni.ContextMenu.MenuItems.Add(new MenuItem("Help", (s, e) => Help()));
       ni.ContextMenu.MenuItems.Add(new MenuItem("Open Root", (s, e) => Launch(RootPath)));
       ni.ContextMenu.MenuItems.Add(new MenuItem("Open Config", (s, e) => OpenConfig()));
       ni.ContextMenu.MenuItems.Add(new MenuItem("Rebuild", (s, e) => Rebuild()));
@@ -154,6 +155,19 @@ namespace TaskbarToolbar
       }
       MessageBox.Show(msg.ToString(), "TaskbarToolbar", MessageBoxButtons.OK, mbi);
     }
+    static void Help() {
+      var msg = new StringBuilder();
+      msg.AppendLine(" * Item Click *");
+      msg.AppendLine("   - L-Click: launch shortcut");
+      msg.AppendLine("   - SHIFT+L-Click: launch shortcut as admin");
+      msg.AppendLine("   - R-Click: open working dir");
+      msg.AppendLine("   - SHIFT+R-Click: open target dir");
+      msg.AppendLine("   - CTRL+R-Click: open shortcut props");
+      msg.AppendLine("\n * Folder Click *");
+      msg.AppendLine("   - SHIFT+L-Click: open admin terminal in folder");
+      msg.AppendLine("   - R-Click: open folder");
+      MessageBox.Show(msg.ToString(), "TaskbarToolbar", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
     static void Launch(string fileName, string verb = "") {
       var pinfo = new ProcessStartInfo {
         FileName = fileName,
@@ -178,8 +192,9 @@ namespace TaskbarToolbar
       RootPath = Environment.ExpandEnvironmentVariables(
         Configuration.GetValue("root", String.Empty)
       );
-      if (String.IsNullOrWhiteSpace(RootPath)) {
-        MessageBox.Show("Root path not configured!", "TaskbarToolbar", MessageBoxButtons.OK, MessageBoxIcon.Error);
+      if (String.IsNullOrWhiteSpace(RootPath) || !System.IO.Directory.Exists(RootPath)) {
+        MessageBox.Show("Invalid root path!", "TaskbarToolbar", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        OpenConfig();
         return false;
       }
       return true;
