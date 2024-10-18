@@ -174,7 +174,10 @@ namespace TaskbarToolbar
         UseShellExecute = true,
       };
       if (!String.IsNullOrEmpty(verb)) pinfo.Verb = verb;
-      Process.Start(pinfo);
+      try { Process.Start(pinfo); }
+      catch (Exception ex) {
+        MessageBox.Show($"Process.Start => {ex.GetType().Name}:\n{ex.Message}", "TaskbarToolbar", MessageBoxButtons.OK, MessageBoxIcon.Error);
+      }
     }
     static void OpenConfig() {
       Launch(System.IO.Path.GetDirectoryName(Application.ExecutablePath));
